@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Student Dashboard - Timetable & Reminders</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .nav-button.active { background-color: #4f46e5; box-shadow: 0 4px 14px 0 rgba(79, 70, 229, 0.39); }
+        .view-toggle-btn.active { background-color: #db2777; color: white; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.1); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: rgba(79, 70, 229, 0.6); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(79, 70, 229, 0.8); }
+        #timetableTable th, #timetableTable td { text-align: center; padding: 0.75rem; }
+        /* Added for new background animation */
+        @keyframes blob { 0% { transform: translate(0px, 0px) scale(1); } 33% { transform: translate(30px, -50px) scale(1.1); } 66% { transform: translate(-20px, 20px) scale(0.9); } 100% { transform: translate(0px, 0px) scale(1); } }
+        .animate-blob { animation: blob 8s infinite ease-in-out; }
+        .animation-delay-2000 { animation-delay: 2s; }
+        .animation-delay-4000 { animation-delay: 4s; }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-200 min-h-screen flex dark">
+    <!-- Animated background -->
+    <div class="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+        <div class="absolute top-1/4 -left-16 w-96 h-96 bg-purple-500 rounded-full mix-blend-screen filter blur-3xl opacity-40 animate-blob"></div>
+        <div class="absolute -top-16 -right-16 w-96 h-96 bg-indigo-500 rounded-full mix-blend-screen filter blur-3xl opacity-40 animate-blob animation-delay-2000"></div>
+        <div class="absolute -bottom-16 left-1/3 w-96 h-96 bg-pink-500 rounded-full mix-blend-screen filter blur-3xl opacity-40 animate-blob animation-delay-4000"></div>
+    </div>
+
+    <!-- Sidebar -->
+    <aside class="w-64 bg-black/10 backdrop-blur-xl p-6 hidden md:block z-10">
+        <h2 class="text-2xl font-bold text-white mb-8 flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" viewBox="0 0 20 20" fill="currentColor"><path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" /></svg>
+            Dashboard
+        </h2>
+        <nav class="space-y-3">
+            <button onclick="showSection('timetable', this)" class="nav-button active w-full flex items-center gap-3 p-3 rounded-lg text-white font-semibold transition-all duration-300 hover:bg-indigo-600">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                <span>Timetable</span>
+            </button>
+            <button onclick="showSection('reminders', this)" class="nav-button w-full flex items-center gap-3 p-3 rounded-lg text-white font-semibold transition-all duration-300 hover:bg-indigo-600">
+                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
+                <span>Reminders</span>
+            </button>
+            <button onclick="showSection('notes', this)" class="nav-button w-full flex items-center gap-3 p-3 rounded-lg text-white font-semibold transition-all duration-300 hover:bg-indigo-600">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                <span>Notes</span>
+            </button>
+        </nav>
+    </aside>
+
+    <!-- Main -->
+    <main class="flex-1 p-4 sm:p-6 lg:p-8 space-y-8 overflow-y-auto z-10">
+        <header class="flex flex-col sm:flex-row justify-between items-center gap-4">
+            <h1 class="text-3xl font-extrabold text-white text-shadow text-center sm:text-left">AI & ML Semester 5</h1>
+            <div class="flex items-center gap-3">
+                <div id="upcoming" class="bg-black/20 backdrop-blur-lg p-4 rounded-xl text-white shadow-lg border border-white/20 text-center">
+                    Next: <span id="nextClass" class="font-bold">Loading...</span><br>
+                    <span id="countdown" class="font-mono text-lg text-yellow-300">--:--:--</span>
+                </div>
+                <!-- Push enable button -->
+                <button id="enablePushBtn" class="hidden sm:inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl shadow transition disabled:opacity-50" title="Enable background push notifications">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a7 7 0 00-7 7v3.586l-.707.707A1 1 0 005 15h14a1 1 0 00.707-1.707L19 12.586V9a7 7 0 00-7-7zm0 20a3 3 0 01-3-3h6a3 3 0 01-3 3z"/></svg>
+                    Enable Push
+                </button>
+            </div>
+        </header>
+
+        <!-- Sections (Timetable, Reminders, Notes) -->
+        <section id="timetable" class="space-y-6">
+            <div class="flex justify-between items-center">
+                <h2 class="text-2xl font-bold text-white">📅 Weekly Timetable</h2>
+                <div class="bg-black/20 backdrop-blur-lg p-1 rounded-lg border border-white/20 flex text-white">
+                    <button onclick="toggleView('card')" class="view-toggle-btn active px-3 py-1 rounded-md text-sm font-semibold">Card</button>
+                    <button onclick="toggleView('grid')" class="view-toggle-btn px-3 py-1 rounded-md text-sm font-semibold">Grid</button>
+                </div>
+            </div>
+            <div id="timetableCardView" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+            <div id="timetableGridView" class="hidden bg-black/20 backdrop-blur-lg rounded-2xl shadow-lg p-5 border border-white/20 overflow-x-auto">
+                <table id="timetableTable" class="w-full text-white"></table>
+            </div>
+        </section>
+
+        <section id="reminders" class="hidden">
+            <h2 class="text-2xl font-bold text-white">⏰ Reminders</h2>
+            <form id="reminderForm" class="flex flex-col md:flex-row gap-4 mt-4 bg-black/20 backdrop-blur-lg p-4 rounded-xl border border-white/20">
+                <input id="task" type="text" placeholder="Enter task/class" required class="flex-1 p-3 rounded-xl bg-black/20 text-white placeholder-gray-400 border border-transparent focus:border-pink-500 focus:ring-pink-500 outline-none transition">
+                <input id="time" type="datetime-local" required class="p-3 rounded-xl bg-black/20 text-white border border-transparent focus:border-pink-500 focus:ring-pink-500 outline-none transition" style="color-scheme: dark;">
+                <button type="submit" class="bg-pink-600 hover:bg-pink-700 px-6 py-3 rounded-xl text-white shadow-lg transition-transform hover:scale-105">Add Reminder</button>
+            </form>
+            <ul id="reminderList" class="mt-6 space-y-3"></ul>
+        </section>
+
+        <section id="notes" class="hidden">
+            <h2 class="text-2xl font-bold text-white">📝 Quick Notes</h2>
+            <div class="bg-black/20 backdrop-blur-lg p-4 rounded-xl border border-white/20">
+                <textarea id="notesArea" placeholder="Write your notes here..." class="w-full p-4 rounded-xl bg-black/20 text-white placeholder-gray-400 min-h-[300px] border border-transparent focus:border-green-500 focus:ring-green-500 outline-none transition"></textarea>
+                <button onclick="saveNotes()" class="mt-4 bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-transform hover:scale-105">💾 Save Notes</button>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // ==========================
+        // --- DATA ---
+        // ==========================
+        const timetable = {
+            Monday: ["08:00 SE&PM", "09:00 Library", "10:30 RM&IPR", "11:30 CV", "13:30 Mentoring", "14:30 NSS"],
+            Tuesday: ["08:00 RM&IPR", "09:00 TC", "10:30 DV Lab(B2)/CN Lab(B1)", "13:30 NSS", "14:30 Mini Project"],
+            Wednesday: ["08:00 CN", "09:00 EVS", "10:30 SE&PM", "11:30 TC", "13:30 Remedial", "14:30 Mini Project"],
+            Thursday: ["08:00 RM&IPR", "09:00 CV", "10:30 CN", "11:30 SE&PM", "13:30 TC"],
+            Friday: ["08:00 TC", "09:00 CN", "10:30 SE&PM", "11:30 CV", "13:30 Forum Activity"],
+            Saturday: ["08:00 DV Lab(B1)/CN Lab(B2)", "09:00 K", "10:30 RM&IPR", "11:30 TC", "12:30 H"]
+        };
+        const dayOrder = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+
+        // ==========================
+        // --- TIMETABLE RENDERING ---
+        // ==========================
+        function renderCardView() {
+            const container = document.getElementById("timetableCardView");
+            container.innerHTML = '';
+            const currentDayName = new Date().toLocaleString('en-us', { weekday: 'long' });
+
+            for (let day in timetable) {
+                const isToday = day === currentDayName;
+                const card = document.createElement("div");
+                card.className = `bg-black/20 backdrop-blur-lg rounded-2xl shadow-lg p-5 text-white hover:scale-105 transition-transform duration-300 border ${isToday ? 'border-yellow-300 ring-2 ring-yellow-300/50' : 'border-white/20'}`;
+                card.innerHTML = `<h3 class="text-xl font-bold mb-4 text-yellow-200">${day}</h3><ul class="space-y-3">${timetable[day].map(cls => { const [time, ...subjectParts] = cls.split(" "); return `<li class="flex items-center justify-between bg-black/20 hover:bg-black/40 rounded-lg px-3 py-2 shadow-inner transition-colors"><span class="flex items-center gap-2 font-mono text-sm"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>${time}</span><span class="font-semibold text-right">${subjectParts.join(" ")}</span></li>`; }).join("")}</ul>`;
+                container.appendChild(card);
+            }
+        }
+
+        function renderGridView() {
+            const container = document.getElementById("timetableTable");
+            container.innerHTML = '';
+            const timeSlots = [...new Set(Object.values(timetable).flat().map(cls => cls.split(" ")[0]))].sort();
+            let headerHTML = `<thead><tr class="border-b border-white/20"><th class="font-semibold">Time</th>`;
+            dayOrder.slice(0, 6).forEach(day => headerHTML += `<th class="font-semibold">${day.substring(0,3)}</th>`);
+            headerHTML += `</tr></thead>`;
+            let bodyHTML = `<tbody>`;
+            timeSlots.forEach(time => {
+                bodyHTML += `<tr class="border-b border-white/10 hover:bg-white/10">`;
+                bodyHTML += `<td class="font-mono text-yellow-300">${time}</td>`;
+                dayOrder.slice(0, 6).forEach(day => {
+                    const cls = timetable[day]?.find(c => c.startsWith(time));
+                    const subject = cls ? cls.split(" ").slice(1).join(" ") : '—';
+                    bodyHTML += `<td>${subject}</td>`;
+                });
+                bodyHTML += `</tr>`;
+            });
+            bodyHTML += `</tbody>`;
+            container.innerHTML = headerHTML + bodyHTML;
+        }
+
+        function toggleView(view) {
+            const cardView = document.getElementById('timetableCardView');
+            const gridView = document.getElementById('timetableGridView');
+            const cardBtn = document.querySelector('.view-toggle-btn[onclick*="card"]');
+            const gridBtn = document.querySelector('.view-toggle-btn[onclick*="grid"]');
+            if (view === 'card') {
+                cardView.style.display = 'grid';
+                gridView.style.display = 'none';
+                cardBtn.classList.add('active');
+                gridBtn.classList.remove('active');
+            } else {
+                cardView.style.display = 'none';
+                gridView.style.display = 'block';
+                gridBtn.classList.add('active');
+                cardBtn.classList.remove('active');
+            }
+        }
+
+        // ==========================
+        // --- COUNTDOWN & NEXT CLASS ---
+        // ==========================
+        let countdownInterval;
+        let notificationTimeout; // Holds the timeout for the pre-class notification
+        function findNextClassDetails() {
+            const now = new Date();
+            for (let i = 0; i < 7; i++) {
+                const checkDate = new Date(now);
+                checkDate.setDate(now.getDate() + i);
+                const dayName = dayOrder[checkDate.getDay() - 1] || (checkDate.getDay() === 0 ? "Sunday" : null);
+                if (timetable[dayName]) {
+                    for (const entry of timetable[dayName]) {
+                        const [time, ...subjectParts] = entry.split(" ");
+                        const [hour, min] = time.split(":").map(Number);
+                        const classTime = new Date(checkDate);
+                        classTime.setHours(hour, min, 0, 0);
+                        if (classTime > now) {
+                            return { subject: subjectParts.join(" "), time: classTime, day: dayName };
+                        }
+                    }
+                }
+            }
+            return null;
+        }
+
+        function startCountdown() {
+            clearInterval(countdownInterval);
+            clearTimeout(notificationTimeout); // Clear any pending pre-class notification
+            const nextClass = findNextClassDetails();
+            const nextClassEl = document.getElementById('nextClass');
+            const countdownEl = document.getElementById('countdown');
+            if (!nextClass) {
+                nextClassEl.textContent = "No classes soon!";
+                countdownEl.textContent = "Enjoy your break 🎉";
+                return;
+            }
+            const today = new Date().toLocaleString('en-us', { weekday: 'long' });
+            nextClassEl.textContent = `${nextClass.subject} ${nextClass.day === today ? "" : `on ${nextClass.day}`}`;
+            
+            // Set up a notification to trigger 5 minutes before the class
+            const NOTIFICATION_LEAD_TIME_MINUTES = 5;
+            const notificationLeadTimeMs = NOTIFICATION_LEAD_TIME_MINUTES * 60 * 1000;
+            const timeUntilNotification = nextClass.time.getTime() - new Date().getTime() - notificationLeadTimeMs;
+
+            if (timeUntilNotification > 0) {
+                notificationTimeout = setTimeout(() => {
+                    notify("Class Starting Soon", `${nextClass.subject} is in ${NOTIFICATION_LEAD_TIME_MINUTES} minutes.`);
+                }, timeUntilNotification);
+            }
+
+            countdownInterval = setInterval(() => {
+                const distance = nextClass.time.getTime() - new Date().getTime();
+                if (distance < 0) {
+                    clearInterval(countdownInterval);
+                    countdownEl.textContent = "Class is starting!";
+                    // Notify the user when the class is starting now
+                    notify("Class is Starting!", `${nextClass.subject} is beginning now.`);
+                    setTimeout(startCountdown, 5000); // Check for the next class
+                    return;
+                }
+                const h = String(Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))).padStart(2, '0');
+                const m = String(Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60))).padStart(2, '0');
+                const s = String(Math.floor((distance % (1000 * 60)) / 1000)).padStart(2, '0');
+                countdownEl.textContent = `${h}h ${m}m ${s}s`;
+            }, 1000);
+        }
+
+        // ==========================
+        // --- NOTIFICATIONS, REMINDERS, NOTES ---
+        // ==========================
+        // Keep requesting permission on first use; some browsers require user gesture, which we handle via the Enable Push button below
+        if ("Notification" in window && Notification.permission === "default") {
+            // Do not auto-prompt aggressively; we'll prompt when user clicks Enable Push
+        }
+
+        function playChime() {
+            const audio = new Audio("https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg");
+            audio.play().catch(() => {});
+        }
+
+        // Unified notify(): uses Service Worker when available for better mobile support
+        function notify(title, body) {
+            const showAlertFallback = () => alert(`${title}\n${body}`);
+
+            if (!('Notification' in window)) {
+                showAlertFallback();
+                return;
+            }
+
+            if (Notification.permission !== 'granted') {
+                // Fallback if no permission
+                showAlertFallback();
+                return;
+            }
+
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.ready.then(reg => {
+                    reg.showNotification(title, {
+                        body,
+                        icon: 'icon.png', // optional: add icon.png in your root for nicer banners
+                        badge: 'icon.png',
+                        tag: 'timetable-reminder',
+                        renotify: true
+                    });
+                    if ('vibrate' in navigator) navigator.vibrate([200, 100, 200]);
+                    playChime();
+                }).catch(() => showAlertFallback());
+            } else {
+                // Desktop fallback
+                new Notification(title, { body });
+                if ('vibrate' in navigator) navigator.vibrate([200, 100, 200]);
+                playChime();
+            }
+        }
+
+        const reminderForm = document.getElementById("reminderForm");
+        const reminderList = document.getElementById("reminderList");
+        let reminders = JSON.parse(localStorage.getItem("reminders") || "[]");
+
+        function renderReminders() {
+            reminderList.innerHTML = reminders
+                .sort((a, b) => new Date(a.time) - new Date(b.time))
+                .map((r, i) => `<li class="bg-black/20 backdrop-blur-lg rounded-lg p-3 flex justify-between items-center text-white border border-white/20"><span>${r.task} - <span class="font-semibold">${new Date(r.time).toLocaleString()}</span></span><button onclick="deleteReminder(${i})" class="text-red-400 font-bold hover:text-red-500 transition-colors">✖</button></li>`)
+                .join("");
+        }
+
+        function deleteReminder(index) {
+            reminders.splice(index, 1);
+            localStorage.setItem("reminders", JSON.stringify(reminders));
+            renderReminders();
+        }
+
+        reminderForm.addEventListener("submit", e => {
+            e.preventDefault();
+            const task = document.getElementById("task").value;
+            const time = new Date(document.getElementById("time").value);
+            reminders.push({ task, time: time.toISOString() });
+            localStorage.setItem("reminders", JSON.stringify(reminders));
+            renderReminders();
+            const delay = time.getTime() - new Date().getTime();
+            if (delay > 0) setTimeout(() => notify("Reminder", task), delay);
+            reminderForm.reset();
+        });
+
+        const notesArea = document.getElementById("notesArea");
+        notesArea.value = localStorage.getItem("notes") || "";
+        function saveNotes() {
+            localStorage.setItem("notes", notesArea.value);
+            notify("Notes Saved", "Your notes have been saved locally.");
+        }
+
+        function showSection(id, buttonElement) {
+            document.querySelectorAll("main section").forEach(sec => sec.classList.add("hidden"));
+            document.getElementById(id).classList.remove("hidden");
+            document.querySelectorAll(".nav-button").forEach(btn => btn.classList.remove("active"));
+            buttonElement.classList.add("active");
+        }
+
+        // ==========================
+        // --- SERVICE WORKER + PUSH (Ready for background push) ---
+        // ==========================
+        const VAPID_PUBLIC_KEY = "BC1oBFQ_qEbXAahPvL8MsZ5AVQS2QW1y4sDdoq_PWM_MPdC-lW3_1q47cE5pkKD9ObKAvy0TWpTYiti2c5cbmGo"; // <-- put your Base64 URL-safe public key here
+
+        function urlBase64ToUint8Array(base64String) {
+            const padding = '='.repeat((4 - base64String.length % 4) % 4);
+            const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+            const rawData = window.atob(base64);
+            const outputArray = new Uint8Array(rawData.length);
+            for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
+            return outputArray;
+        }
+
+        async function registerServiceWorker() {
+            if (!('serviceWorker' in navigator)) return null;
+            try {
+                const reg = await navigator.serviceWorker.register('sw.js');
+                console.log('✅ Service Worker registered', reg);
+                return reg;
+            } catch (err) {
+                console.error('Service Worker registration failed:', err);
+                return null;
+            }
+        }
+
+        async function subscribeUserToPush(reg) {
+    try {
+        const subscription = await reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array("BKdYCFtTidlEJLE9cT3Qvp5EbKvENg88OMWnRd0KBDOo9Gno13i3LLvW6lD0b8tG8XvZ9g4QEWyIgf4IkjummrM")
+        });
+
+        // Save locally (optional)
+        localStorage.setItem("pushSubscription", JSON.stringify(subscription));
+        console.log("User is subscribed:", subscription);
+
+        // 🔥 Send subscription to your backend
+        await fetch("http://localhost:4000/subscribe", {
+            method: "POST",
+            body: JSON.stringify(subscription),
+            headers: {
+                "Content-Type": "application/json"
+            }
+        });
+
+        alert("Push subscription enabled!");
+    } catch (err) {
+        console.error("Subscription failed", err);
+    }
+}
+
+
+        async function requestNotificationPermission() {
+            if (!('Notification' in window)) return 'denied';
+            if (Notification.permission === 'granted' || Notification.permission === 'denied') return Notification.permission;
+            try {
+                const p = await Notification.requestPermission();
+                return p;
+            } catch {
+                return 'denied';
+            }
+        }
+
+        async function enablePushFlow() {
+            const btn = document.getElementById('enablePushBtn');
+            btn.disabled = true;
+            try {
+                const permission = await requestNotificationPermission();
+                if (permission !== 'granted') {
+                    alert('Please allow notifications to enable push reminders.');
+                    return;
+                }
+                const reg = await registerServiceWorker();
+                if (!reg) return;
+                const sub = await getPushSubscription(reg);
+                if (sub) {
+                    // Save or send subscription to your server here
+                    console.log('📬 Push subscription JSON:', JSON.stringify(sub));
+                    localStorage.setItem('pushSubscription', JSON.stringify(sub));
+                    alert('Push notifications enabled!');
+                }
+            } finally {
+                await updatePushUi();
+                btn.disabled = false;
+            }
+        }
+
+        async function updatePushUi() {
+            const btn = document.getElementById('enablePushBtn');
+            if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+                btn.textContent = 'Push Not Supported';
+                btn.disabled = true;
+                return;
+            }
+            if (Notification.permission === 'granted') {
+                const reg = await navigator.serviceWorker.getRegistration();
+                const sub = reg ? await reg.pushManager.getSubscription() : null;
+                if (sub) {
+                    btn.textContent = 'Push Enabled';
+                    btn.disabled = true;
+                } else {
+                    btn.textContent = 'Enable Push';
+                    btn.disabled = false;
+                }
+            } else if (Notification.permission === 'denied') {
+                btn.textContent = 'Notifications Blocked';
+                btn.disabled = true;
+            } else {
+                btn.textContent = 'Enable Push';
+                btn.disabled = false;
+            }
+        }
+
+        // ==========================
+        // --- GENERAL SETUP ---
+        // ==========================
+        document.addEventListener('DOMContentLoaded', async () => {
+            renderCardView();
+            renderGridView();
+            renderReminders();
+            startCountdown();
+
+            // SW registration (won't prompt for push yet)
+            await registerServiceWorker();
+            await updatePushUi();
+
+            const enableBtn = document.getElementById('enablePushBtn');
+            enableBtn.addEventListener('click', enablePushFlow);
+        });
+    </script>
+</body>
+</html>
